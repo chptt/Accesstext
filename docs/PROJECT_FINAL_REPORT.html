@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project Final Report — Message-Level Accessibility Extraction</title>
+<style>
+  @page { size: A4; margin: 11mm 11mm 12mm 11mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 8.5pt; line-height: 1.3;
+         color: #16201f; margin: 0; }
+  h1 { font-size: 17pt; margin: 0 0 1.5mm 0; line-height: 1.12; }
+  h2 { font-size: 11pt; margin: 0 0 1.6mm 0; padding-bottom: 0.8mm;
+       border-bottom: 2px solid #00696b; color: #00494a; break-after: avoid; }
+  h3 { font-size: 9.2pt; margin: 2.2mm 0 0.9mm 0; color: #00494a; break-after: avoid; }
+  p { margin: 0 0 1.5mm 0; }
+  ul, ol { margin: 0 0 1.5mm 0; padding-left: 4.2mm; }
+  li { margin-bottom: 0.6mm; }
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 2mm 0; font-size: 7.5pt;
+          break-inside: avoid; }
+  th { background: #e6efee; text-align: left; font-weight: 600; }
+  th, td { border: 0.4px solid #b6c6c4; padding: 0.8mm 1.2mm; vertical-align: top; }
+  code, .mono { font-family: "Consolas", monospace; font-size: 7.4pt; }
+  pre { font-family: "Consolas", monospace; font-size: 6.8pt; background: #f2f6f6;
+        border-left: 2.5px solid #00696b; padding: 1.3mm 1.7mm; margin: 1mm 0 2mm 0;
+        white-space: pre-wrap; line-height: 1.22; break-inside: avoid; }
+  .box { border: 0.5px solid #b6c6c4; border-left: 2.5px solid #00696b; background: #f6fafa;
+         padding: 1.5mm 2mm; margin: 0 0 2mm 0; break-inside: avoid; }
+  .warn { border-left-color: #ba1a1a; background: #fdf4f3; }
+  .ok { border-left-color: #1a7f37; background: #f3faf5; }
+  .kicker { font-size: 7.8pt; letter-spacing: 1.4px; text-transform: uppercase; color: #00696b;
+            font-weight: 700; margin-bottom: 1mm; }
+  .sub { font-size: 10pt; color: #3f4948; margin-bottom: 2.5mm; }
+  .cols { display: flex; gap: 3mm; }
+  .cols > div { flex: 1; }
+  .flow { display: flex; flex-wrap: wrap; gap: 1.1mm; margin: 1mm 0 2mm 0; }
+  .step { border: 0.6px solid #7fa0a0; background: #eef6f6; border-radius: 2px;
+          padding: 1mm 1.4mm; font-size: 7.2pt; flex: 1 1 21%; }
+  .step b { display: block; color: #00494a; font-size: 7.5pt; }
+  .num { font-size: 13pt; font-weight: 700; color: #00696b; }
+  .stat { text-align: center; border: 0.5px solid #b6c6c4; padding: 1.3mm 0.6mm; flex: 1; }
+  .stats { display: flex; gap: 1.5mm; margin-bottom: 2mm; }
+  .stat small { display: block; font-size: 6.8pt; color: #4a5a58; line-height: 1.2; }
+  .foot { font-size: 7.2pt; color: #5a6664; border-top: 0.5px solid #c8d6d4; padding-top: 1mm;
+          margin-top: 2mm; }
+  .tag { font-size: 6.8pt; font-weight: 700; padding: 0.3mm 1mm; border-radius: 2px;
+         background: #dceceb; color: #00494a; }
+  .tag.red { background: #fbdcd8; color: #8c1500; }
+  .tag.amber { background: #fdf0d5; color: #7a5200; }
+  .brk { break-before: page; }
+  .pair td { border: none; padding: 0.5mm 1.3mm 0.5mm 0; font-size: 7.4pt; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div>
+  <div class="kicker">Bench Project · Research Prototype · Final Status Report</div>
+  <h1>Reading Messages Through Android's Accessibility Layer</h1>
+  <div class="sub">Can a messaging app's visible screen be rebuilt into individual message records —
+    and how much of that is actually proven?</div>
+
+  <p><b>Project:</b> Grooming-Risk Research Prototype &nbsp;·&nbsp;
+     <b>Package:</b> <code>com.example.groomingresearchdemo</code> v1.0 (versionCode 1) &nbsp;·&nbsp;
+     <b>Report date:</b> 2026-10-20 &nbsp;·&nbsp;
+     <b>Platform:</b> Android (minSdk 24, target/compile SDK 36)</p>
+
+  <h2>Plain-English summary — what this tool does</h2>
+  <p>The researcher opens a messaging app on a test phone, switches back to this tool and presses one
+    button. The tool takes a single "shape read" of whatever screen is currently visible — using the same
+    Android feature a screen reader uses for a blind user — and reports what it found. It reads the screen
+    <i>once</i>: no scrolling, no clicking, no history navigation, no background running, and it cannot
+    send anything.</p>
+  <p>Two readings come from that one look at the screen. The <b>first</b> counts structure — how many
+    elements are on screen, how many expose text, how deep the layout goes. That is the compatibility
+    evidence, unchanged from the earlier phase. The <b>second</b>, added now and only if a box is ticked,
+    tries to go further: work out which elements are individual chat messages, put them in reading order,
+    and rebuild them as message records.</p>
+
+  <h2>The honest headline</h2>
+  <div class="box warn">
+    <p style="margin-bottom:1mm"><b>What works:</b> the full pipeline builds, passes 160 automated tests,
+    installs and runs on Android 15, and has been executed against real Instagram three times without
+    crashing. It correctly refuses to invent senders, timestamps or message boundaries.</p>
+    <p style="margin-bottom:0"><b>What is not proven:</b> whether any of it is <i>correct</i> on a real
+    app. Accuracy on real conversations is <b>NOT MEASURED</b>, because no real screen has yet been
+    transcribed by hand to compare against. No Instagram, Instagram Lite, WhatsApp, Signal, Telegram or
+    Google Messages compatibility claim is made here, and the counts on page 8 must not be repeated as
+    "messages extracted".</p>
+  </div>
+
+  <h2>Key numbers at a glance</h2>
+  <div class="stats">
+    <div class="stat"><span class="num">160</span><small>unit tests<br>0 failures</small></div>
+    <div class="stat"><span class="num">+103</span><small>new tests over<br>the 57 baseline</small></div>
+    <div class="stat"><span class="num">14</span><small>named synthetic<br>chat-tree fixtures</small></div>
+    <div class="stat"><span class="num">10</span><small>new source files<br>in the extraction stage</small></div>
+    <div class="stat"><span class="num">0</span><small>permissions added<br>· network · files</small></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="num">12/13</span><small>candidate precision &amp; recall,<br>
+      synthetic screens only</small></div>
+    <div class="stat"><span class="num">8</span><small>structural observations<br>R1–R8 on real apps</small></div>
+    <div class="stat"><span class="num">3</span><small>real-app extraction runs<br>Instagram, all unlabelled</small></div>
+    <div class="stat"><span class="num">1</span><small>long-pending edge case<br>finally observed (RC-04)</small></div>
+    <div class="stat"><span class="num">0</span><small>message strings ever<br>reached Logcat</small></div>
+  </div>
+
+  <div class="box ok" style="margin-bottom:0">
+    <b>The design principle that shaped everything:</b> <i>add a stage, do not replace one.</i> The
+    original inspection code that produced the earlier compatibility findings was left byte-identical. The
+    new capability sits beside it, so the old evidence stays valid and the new evidence is clearly
+    separated from it.</div>
+
+  <div class="foot">Prepared from executed commands and observed output. Where something was not measured,
+    this report writes NOT MEASURED rather than a plausible number.</div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="brk">
+  <h2>1. Background, objective and boundaries</h2>
+  <p><b>Context.</b> The parent project investigates whether automated assistance can help identify
+    grooming risk in conversations, and any such system needs message-level text — who said what, in what
+    order. Messaging apps offer no research API, so the question becomes: does Android's own accessibility
+    layer already expose enough to reconstruct messages, without hacking, root or bypassing anything?
+    <b>Objective for this phase:</b> extend the existing prototype so that visible, accessible UI elements
+    can be reconstructed into message-level records for an explicitly selected conversation the researcher
+    is authorised to study — and report honestly how well that works.</p>
+
+  <h3>What "accessibility layer" means here, in one paragraph</h3>
+  <p>Android gives an app a permission-free way to describe its own screen to assistive technology: every
+    visible widget appears as a <i>node</i> in a tree, each with a class name (TextView, Button), optional
+    text, an optional description, a rectangle on screen, and child nodes. A screen reader reads this tree
+    aloud; our tool reads the same tree. It is the app volunteering information to the operating system —
+    not a hidden channel, not a security bypass — and it works only while that screen is actually on
+    display.</p>
+
+  <h3>Hard boundaries accepted by this build</h3>
+  <div class="cols">
+    <div>
+      <p style="margin-bottom:0.7mm"><b>Allowed</b></p>
+      <ul>
+        <li>One read, triggered by one deliberate button press</li>
+        <li>Only the currently visible screen</li>
+        <li>Only the app the researcher selected</li>
+        <li>Text held in memory, for that one inspection</li>
+        <li>A visible "armed" indicator and a Stop/Cancel action</li>
+      </ul>
+    </div>
+    <div>
+      <p style="margin-bottom:0.7mm"><b>Never</b></p>
+      <ul>
+        <li>No scrolling, clicking, sending or history navigation</li>
+        <li>No background polling, timers or scheduled scraping</li>
+        <li>No screenshots, recording, clipboard, keystrokes, notifications</li>
+        <li>No private app databases, network traffic, encryption bypass, hidden APIs</li>
+        <li>No deleted, hidden or off-screen content; no upload of any kind</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Two consent gates that are deliberate, not inconvenient</h3>
+  <p><b>Gate 1 — the accessibility toggle.</b> Android only lets a human turn on an accessibility service,
+    from Settings, after reading what it can do. This harness will not do it by <code>adb</code>, and has
+    refused three attempts to work around that (a settings write, a cross-app UI dump, synthetic taps). The
+    consequence matters: <b>no automated real-app validation is possible</b>, so every real-device row in
+    this report came from a human pressing a button. <b>Gate 2 — the extraction tick-box.</b> The
+    message-level stage is off unless explicitly ticked, and the choice is captured at the moment of
+    arming; unticking afterwards cannot widen or narrow an inspection the researcher already consented to.
+    The target app is frozen the same way.</p>
+
+  <h2>2. What the tool is <i>not</i></h2>
+  <ul>
+    <li><b>Not a monitor.</b> No polling, no timer loop, no retry, no background service. Each qualifying
+      event schedules <i>one</i> deferred read — a single <code>postDelayed</code> of 1.5 s, so a transition
+      frame can settle before the one snapshot — and an arm token rejects it if the researcher cancelled or
+      re-armed in between. There is no coroutine scope, <code>Timer</code>, <code>AlarmManager</code> or
+      <code>WorkManager</code>; the only coroutine imports are <code>StateFlow</code>, used to publish UI
+      state after something already happened.</li>
+    <li><b>Not a scraper, and not a detector.</b> It cannot browse contacts or walk back through history:
+      one press = one screen = one result. No machine-learning model is connected; the adapter refuses
+      uncertain records and the model placeholder returns "Model not integrated", so nothing in this build
+      labels anything as grooming.</li>
+    <li><b>Not a general result.</b> Eight structural observations and three extraction runs across two
+      apps is a handful, and the spec forbids claiming general compatibility from them.</li>
+  </ul>
+
+  <h2>3. How it works — the pipeline</h2>
+  <div class="flow">
+    <div class="step"><b>1 · Arm</b>Researcher presses Start. Consent, service and target are checked; the
+      extraction tick-box is frozen here.</div>
+    <div class="step"><b>2 · One event</b>The target app's window-change event arrives. State flips to
+      EXECUTING <i>before</i> the tree opens, so a second event cannot trigger a second read.</div>
+    <div class="step"><b>3 · Open once</b>A lazy provider hands over the accessibility root. If the
+      package does not match, the tree is never opened.</div>
+    <div class="step"><b>4 · Two passes</b>Structural BFS (unchanged) produces counts. If opted in, an
+      extraction BFS walks the same snapshot.</div>
+    <div class="step"><b>5 · Classify</b>Every node judged by transparent rules → candidate, ambiguous or
+      rejected-with-a-reason.</div>
+    <div class="step"><b>6 · Reconstruct</b>Order by on-screen geometry, suppress duplicates, emit records
+      with nullable sender/timestamp.</div>
+    <div class="step"><b>7 · Report</b>Counts on the results screen; five independent status gates; text
+      only on a separate deliberate review screen.</div>
+    <div class="step"><b>8 · Forget</b>Leaving review, cancelling, revoking consent or changing target
+      destroys the retained text. Counts survive.</div>
+  </div>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="brk">
+  <h3>The one-shot lifecycle, stated precisely</h3>
+  <pre>NOT_ARMED --arm(consent, service, target, extraction?)--> ARMED
+ARMED      --qualifying event-->  EXECUTING --root read--> result, back to NOT_ARMED
+ARMED      --cancel()-->          NOT_ARMED   (records a CANCELLED result, no stats)
+any        --consent revoke / service disconnect / app restart--> forceDisarm(), nothing retained</pre>
+  <p>There is no path back to ARMED without another human press. An app restart does not re-arm; a failed
+    inspection does not retry.</p>
+
+  <h3>Three layers bound which app can ever be read</h3>
+  <table>
+    <tr><th>Layer</th><th>Mechanism</th><th>Effect</th></tr>
+    <tr><td>1 · Config</td><td><code>android:packageNames</code> in the accessibility service config</td>
+        <td>Android delivers events from <b>six allowlisted messaging apps only</b>; every other app on the
+        device cannot reach this service at all.</td></tr>
+    <tr><td>2 · Runtime</td><td><code>setServiceInfo()</code> narrowing at connect time</td>
+        <td>The allowlist is cut down to the single app the researcher selected.</td></tr>
+    <tr><td>3 · Logic</td><td><code>armedTarget</code> equality check on each event</td>
+        <td>Even a matching package's event is ignored unless it equals the frozen arm-time target —
+        verified by <code>anEventFromAnotherPackageLeavesBothTheArmAndTheExtractionFlagIntact</code>.</td></tr>
+  </table>
+  <p>Allowlist: <code>com.google.android.apps.messaging</code>, <code>com.instagram.android</code>,
+    <code>com.instagram.lite</code>, <code>com.whatsapp</code>, <code>org.telegram.messenger</code>,
+    <code>org.thoughtcrime.securesms</code>. WhatsApp, Telegram and Signal are permitted but <b>not
+    installed</b> on the test image, so nothing about them has been observed at all.</p>
+
+  <h3>Defensive handling of a tree that misbehaves</h3>
+  <p>Every property read is wrapped individually, so a node refusing one attribute costs that attribute and
+    not the node. A <code>childCount()</code> that throws is counted as a <b>lost subtree</b> rather than
+    treated as a leaf — the tool will not claim "this screen is small" because the platform declined to
+    answer. A node that declares <i>n</i> children but yields fewer is flagged as structure lost, the live
+    signature of a screen changing mid-read. Text and its presence flag come from <b>one</b> read, never
+    two, because the framework may return a different value on the next call.</p>
+
+  <h2>4. Technical implementation — what was added</h2>
+  <div class="cols">
+    <div>
+      <table>
+        <tr><th>Toolchain</th><th>Version</th></tr>
+        <tr><td>Gradle / AGP</td><td>8.14.6 / 8.13.2</td></tr>
+        <tr><td>Kotlin</td><td>2.2.21 (JVM target 17)</td></tr>
+        <tr><td>UI</td><td>Jetpack Compose, Material 3, BOM 2026.01.01</td></tr>
+        <tr><td>SDK levels</td><td>compile 36 · target 36 · min 24</td></tr>
+        <tr><td>Tests</td><td>JUnit 4, JVM only; <b>no</b> Robolectric/Espresso added</td></tr>
+        <tr><td>Dependencies added</td><td><b>zero</b></td></tr>
+        <tr><td>Build host</td><td>Windows 10.0.26200 x64, JBR 17</td></tr>
+        <tr><td>Test device</td><td>AVD <code>Pixel_API35_Play</code>, Android 15 / API 35, x86_64</td></tr>
+      </table>
+    </div>
+    <div>
+      <table>
+        <tr><th>File added (main source)</th><th>Role</th></tr>
+        <tr><td><code>NodeBounds</code></td><td>Android-free screen rectangle</td></tr>
+        <tr><td><code>MessageLevelTraverser</code></td><td>Second BFS: seen-set, duplicate and lost-subtree counters, viewport</td></tr>
+        <tr><td><code>NodeSample</code></td><td>One node's metadata + temporary text</td></tr>
+        <tr><td><code>CandidateClassifier</code></td><td>Transparent rules with named reasons</td></tr>
+        <tr><td><code>MessageLevelExtractor</code></td><td>Orchestrates traverse → classify → reconstruct</td></tr>
+        <tr><td><code>MessageReconstructor</code></td><td>Ordering, dedup, echo suppression, record emission</td></tr>
+        <tr><td><code>Reconstruction</code></td><td><code>MessageRecord</code> list, counts, statuses, reasons</td></tr>
+        <tr><td><code>InspectionLadder</code></td><td>The five independently gated claims</td></tr>
+        <tr><td><code>ValidatedRecordAdapter</code></td><td>Accepted records → model input, or refusal</td></tr>
+        <tr><td><code>ReviewScreen</code></td><td>The single deliberate, temporary text-review surface</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <h3>The node interface was widened without touching the old code path</h3>
+  <p><code>AccessibilityNodeView</code> is the small interface the whole pipeline reads through, so the real
+    <code>AccessibilityNodeInfo</code> never leaks into logic that must stay unit-testable. Seven members
+    were added — <b>each with a default implementation</b>:</p>
+  <pre>boundsInScreen(): NodeBounds?   isClickable()   isScrollable()   isVisibleToUser(): Boolean?
+parent(): AccessibilityNodeView?   nodeId(): Long?   aggregatesDescendantText(): Boolean</pre>
+</div>
+
+<!-- ============ PAGE 4 ============ -->
+<div class="brk">
+  <p>Defaults are the mechanism that keeps the original inspector byte-identical: new members are inert
+    unless something calls them, and the structural pass calls none of them.
+    <code>isVisibleToUser()</code> is deliberately <b>nullable</b> — "unknown" and "invisible" drive
+    different decisions and must not collapse into one. <code>aggregatesDescendantText()</code> detects the
+    container-echo case by comparing a node's text against its own children, bounded at 64 children so a
+    screen-wide container cannot stall the traversal. <b>Deliberately absent:</b>
+    <code>viewIdResourceName</code> and any package/install metadata — those are the levers that would turn
+    a research prototype into an app-specific scraper. No classifier rule keys on a package name or view ID,
+    and an unrecognised class such as <code>com.shrug.bubble.CustomMessageText</code> is judged on structure
+    alone (a test proves it).</p>
+
+  <h3>Modified: 11 files</h3>
+  <p><code>AccessibilityNodeView</code> (widened), <code>InspectionController</code> (arm-time extraction
+    flag, second stage), <code>InspectionResult</code> (optional reconstruction),
+    <code>RealAccessibilityNodeView</code> (device reads behind <code>runCatching</code>),
+    <code>ResearchStore</code> (one retained reconstruction, <code>forgetExtractedContent()</code>),
+    <code>ResearchUiState</code>, <code>RootScreen</code>, <code>ExperimentScreen</code> (tick-box + review
+    entry), <code>ResultsScreen</code> (count set + ladder), <code>ReviewScreen</code> (layout fix, page 8),
+    <code>FakeNode</code> (test fake gained bounds, flags, parent, node ids and throwing shapes).</p>
+
+  <h3>Untouched by design — and why that matters</h3>
+  <p><code>StructuralInspector</code>, <code>ChatInspectionService</code>,
+    <code>CompatibilityReportBuilder</code>, <code>Enums</code>, <code>ConversationPreprocessor</code>,
+    <code>GroomingModelAdapter</code>, <code>AuthorizedTextParser</code>, the manifest, the accessibility
+    config, <code>build.gradle.kts</code> and docs/11. The service file being unmodified is the strongest
+    available proof the capability was extended rather than replaced — and the report builder being
+    unmodified means the compatibility report <i>cannot</i> carry message text, because nothing new writes
+    to it.</p>
+
+  <h2>5. The classifier and the reconstruction rules</h2>
+  <p>Both are pure Kotlin with zero Android imports, so they run on synthetic trees on a normal JVM. The
+    spec asked for a transparent rule-based classifier <i>before</i> sophisticated reconstruction; that
+    ordering was followed, and every exclusion returns a named reason string so the UI can explain a
+    rejection without quoting the rejected text.</p>
+
+  <h3>Exclusion rules — screen furniture that is not a message</h3>
+  <table>
+    <tr><th>Rule</th><th>Detection signal (structural, not app-specific)</th></tr>
+    <tr><td>Navigation labels</td><td>Chrome phrase list matched on shape; short label in the top band</td></tr>
+    <tr><td>Search controls</td><td>"search" phrase, class shape, position</td></tr>
+    <tr><td>Text-entry fields</td><td><code>EditText</code> class — the composer, not a sent message</td></tr>
+    <tr><td>Send buttons</td><td><code>Button</code>/<code>ImageButton</code> + clickable + "send"</td></tr>
+    <tr><td>Menus, dialogs, headers, profile labels</td><td>Named phrase and class-shape rules</td></tr>
+    <tr><td>Loading indicators, announcements</td><td>Receipt / announcement shapes</td></tr>
+    <tr><td>Container echoes</td><td>Node whose text equals its own child's text</td></tr>
+    <tr><td>Invisible nodes</td><td><code>isVisibleToUser() == false</code> → rejected; <code>null</code> → only weakened</td></tr>
+  </table>
+  <p>Two guardrails exist because naive chrome filters eat real messages: a status word inside a real
+    sentence does not delete it (<code>"did you read it yet"</code> stays a candidate), and short replies
+    like <code>"ok"</code> survive the list. A one-character node is made <b>ambiguous</b>, not dropped —
+    preserving uncertainty is required.</p>
+
+  <h3>A design bug the tests caught, and what it taught</h3>
+  <p>Writing the classifier tests exposed a layering flaw: low evidence strength forced
+    <code>AMBIGUOUS</code>, which made the <code>CANDIDATE</code> status and the
+    <code>TRAVERSAL_UNVERIFIED</code> order basis <b>unreachable</b> — two of the states the specification
+    requires could never be displayed. Root cause: placement was being decided by the classifier, where it
+    does not belong. Missing geometry is an <i>ordering</i> problem, not an <i>identity</i> problem. The fix
+    split the axes — an unresolved role becomes ambiguous, while a plausible message with no geometry stays
+    a candidate at low strength — and safety moved downstream: the reconstructor refuses a record it cannot
+    order. The rule changed from "weaken the evidence label" to "refuse the verdict", which is where the
+    specification puts it.</p>
+</div>
+
+<!-- ============ PAGE 5 ============ -->
+<div class="brk">
+  <h3>The ten reconstruction rules implemented</h3>
+  <ol>
+    <li><b>Order from geometry</b> — visible top-to-bottom position, grouped into row bands.</li>
+    <li><b>Structural order only as a named fallback</b> — <code>TRAVERSAL_UNVERIFIED</code>, which caps the
+      result at INCOMPLETE and accepts nothing.</li>
+    <li><b>Detect and deduplicate repeated text</b> between parent and child; the child survives.</li>
+    <li><b>Never merge adjacent nodes</b> into one message without structural evidence.</li>
+    <li><b>Never split on punctuation or line breaks</b> — a three-line bubble is one record.</li>
+    <li><b>Alignment-based sender inference is opt-in, off by default, self-labelled</b> as a heuristic. It
+      emits a <i>side</i> token, never a person, and the adapter refuses to promote it into a name.</li>
+    <li><b>Never invent</b> timestamps, senders, missing messages or boundaries.</li>
+    <li><b>Preserve ambiguity</b> — uncertain records stay visible, marked and counted.</li>
+    <li><b>Partial vs complete</b> — clipping, truncation and mid-read mutation all force "partial".</li>
+    <li><b>Boundaries unclear ⇒ INCOMPLETE or UNSUPPORTED</b>, never guessed text presented as a
+      conversation.</li>
+  </ol>
+
+  <h3>Record schema</h3>
+  <pre>MessageRecord(candidateId, text?, speakerLabel?, timestampMillis?, bounds?,
+              confidence, evidence: List&lt;String&gt;, status, visibleOrderIndex?)</pre>
+  <p><code>candidateId</code> is synthesised per inspection (<code>"i42-0001"</code>) and never derived from
+    a framework node id. <code>evidence</code> holds non-sensitive structural reasons such as
+    <code>leaf-node</code>, <code>valid-bounds</code>, <code>geometry-missing</code> — a test asserts no
+    evidence token ever quotes the node's text.</p>
+
+  <h3>The five status gates</h3>
+  <table>
+    <tr><th>#</th><th>Claim</th><th>Its own criterion</th></tr>
+    <tr><td>1</td><td>Inspection completed</td><td>A terminal COMPLETED outcome with a root read</td></tr>
+    <tr><td>2</td><td>Candidates detected</td><td>Extraction ran and found ≥1 message-shaped node</td></tr>
+    <tr><td>3</td><td>Message structure reconstructed</td><td>Records placed in an established order, with boundaries established</td></tr>
+    <tr><td>4</td><td>Speaker attribution validated</td><td>A rule fired <b>and</b> was validated against an annotated sample</td></tr>
+    <tr><td>5</td><td>Complete conversation validated</td><td>Not a partial sample <b>and</b> the researcher attests the screen was the whole conversation</td></tr>
+  </table>
+  <p>Modelled as five independent booleans, <b>not</b> one ordinal enum — an enum invites a
+    <code>level &gt;= 3</code> check in the UI, which lets level 1 satisfy level 5's display slot by
+    arithmetic. Each unmet gate carries its own reason string, so "no" never looks like a silent failure.
+    Levels 4 and 5 need evidence the app cannot generate itself, so in any unattended run they read "not
+    met" — the correct answer, not a shortfall to design around.</p>
+
+  <h2>6. Privacy and security controls</h2>
+  <p>Every row below was verified by an executed test or observed device output, not by assertion.</p>
+  <table>
+    <tr><th>Control</th><th>Mechanism</th><th>Verification</th></tr>
+    <tr><td>No network at all</td><td>Manifest declares <b>zero</b> <code>&lt;uses-permission&gt;</code> and
+      no <code>INTERNET</code>; <code>allowBackup="false"</code></td><td>Manifest read; unchanged since
+      2026-10-19</td></tr>
+    <tr><td>No persistence of message text</td><td>One in-memory reconstruction; no preference key, file or
+      database path added</td><td>Grep proof + <code>ExtractionPrivacyTest</code></td></tr>
+    <tr><td>Text never in logs, reports or crashes</td><td>Hand-written <code>toString()</code> on all five
+      content-carrying types, reporting <code>textPresent=true</code> instead of the text</td>
+      <td>Marker <code>PRIVATE-MESSAGE-MARKER-4b7b</code> proven absent from every artefact</td></tr>
+    <tr><td>Content cleared on finish / cancel / leave</td><td><code>forgetExtractedContent()</code> on arm
+      change, revoke, cancel and both review-screen exits</td><td>Store tests + observed device log line at
+      18:09:08</td></tr>
+    <tr><td>Default view is structural</td><td>Results screen shows counts only; text needs a second named
+      action, carries a privacy notice, offers no save/export/share</td><td>Screen code + KDoc rationale</td></tr>
+    <tr><td>No alternative collection routes</td><td>No notification listener, clipboard, input method,
+      screenshot or screen capture anywhere</td><td>Grep: no hits</td></tr>
+    <tr><td>No hidden APIs</td><td>Node identity would need non-public <code>getSourceNodeId()</code> —
+      <b>declined</b>, with a legal fallback</td><td><code>javap</code> against
+      <code>android-36/android.jar</code></td></tr>
+    <tr><td>No node retained past its life</td><td>No <code>recycle()</code> call (deprecated at API 33,
+      no-op after 34); references never outlive the traversal</td><td>Service KDoc + code read</td></tr>
+    <tr><td>Existing controls preserved</td><td>Three-layer package bound, lazy root provider, 5000-node cap,
+      cancel-equals-disarm, force-disarm on connect and disconnect</td><td>All 57 original tests still
+      passing</td></tr>
+    <tr><td>No analytics or ad SDKs</td><td>Zero dependencies added</td><td><code>build.gradle.kts</code>
+      unchanged</td></tr>
+  </table>
+
+  <div class="box" style="margin-bottom:0">
+    <b>Audit finding on the pre-existing code (documented, not smoothed over):</b> the specification asked
+    that any existing privacy violation be recorded and minimally corrected. <b>None was found.</b> The
+    original implementation already discarded text the instant its length was measured, already bound the
+    target three ways, and already had no network path — so no corrective change was made, and none was
+    introduced under the banner of "extraction". The only posture change is the deliberate, bounded,
+    in-memory retention the new stage needs.</div>
+</div>
+
+<!-- ============ PAGE 6 ============ -->
+<div class="brk">
+  <h3>Data-minimisation choices worth naming</h3>
+  <ul>
+    <li><b>Booleans before content.</b> The structural pass records "does this node expose text" rather than
+      the text — that is what keeps the compatibility report content-free.</li>
+    <li><b>Geometry is safe to keep.</b> A rectangle is a position, not a message.</li>
+    <li><b>Reasons are strings the classifier wrote</b>, such as
+      <code>multiple-text-nodes-in-one-row</code> — never the rejected text itself.</li>
+    <li><b>One reconstruction at a time.</b> A new inspection replaces the previous one before anything is
+      published, so content cannot accumulate across runs.</li>
+    <li><b>Published copies are record-free.</b> Session reports and UI state receive
+      <code>withoutRecords()</code>; the full copy is reachable only through the single peek used by the
+      review screen.</li>
+  </ul>
+
+  <div class="box warn"><b>Boundary held this session.</b> The researcher asked for the reconstructed text
+    to appear in the terminal. That was refused: terminal output means Logcat, which the privacy section of
+    the spec names explicitly, it persists on the device, it lands in bug reports, and it would carry
+    another person's messages out of the app. The sanctioned route — the in-app review screen — already
+    existed and needed no rebuild. A screenshot of that screen was also declined, because writing the image
+    to a file is exactly the persistence these controls exist to prevent.</div>
+
+  <h2>7. Testing and build results</h2>
+  <h3>Commands executed, and the actual output</h3>
+  <pre>export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+./gradlew.bat --offline --rerun-tasks :app:testDebugUnitTest :app:assembleDebug → EXIT=0  BUILD SUCCESSFUL in 20s  (43 tasks, 2026-10-21)
+./gradlew.bat --offline --rerun-tasks :app:testDebugUnitTest   → EXIT=0  BUILD SUCCESSFUL in 11s  (24 tasks, 2026-10-20)
+./gradlew.bat --offline --rerun-tasks :app:assembleDebug       → EXIT=0  BUILD SUCCESSFUL in 9s   (37 tasks, 2026-10-20)
+grep -c "^e:\|^w:" → 0     (no compile errors, no warnings)</pre>
+  <p><b>Result: 160 tests / 0 failures / 0 errors / 0 skipped.</b> The latest four are token tests for the
+    1.5 s settle delay (page 2); the rest are the Phase D suite unchanged. Totals were read from the JUnit XML under
+    <code>app/build/test-results/</code>, not inferred from the task line. <code>--rerun-tasks</code> is
+    mandatory, not stylistic: without it Gradle reports <code>UP-TO-DATE</code>/<code>FROM-CACHE</code> and
+    the green line describes an older build. Two earlier runs were misread for exactly that reason — a stale
+    log containing a cancelled build was re-read as current — which is why every number here is tied to a
+    freshly written log. <b>APK:</b>
+    <code>app/build/outputs/apk/debug/app-debug.apk</code> = <b>12,114,117 bytes</b>, up 81,979 over the
+    12,032,138-byte baseline recorded at audit time (that baseline came from an earlier session and was not
+    re-measured, so the delta is exact only to the extent that figure was).</p>
+
+  <h3>Regression baseline respected: 57 → 160</h3>
+  <p>All 57 originals are present and passing — none deleted, renamed away or converted into a no-op. The 6
+    pre-existing classes contribute the original 57, now 61 because the controller class gained four token
+    tests (StructuralInspector 13, InspectionController 19, ConversationPreprocessor 13, AuthorizedTextParser 9,
+    CompatibilityReport 4, PlaceholderModel 3).</p>
+  <table>
+    <tr><th>New test class</th><th>Tests</th><th>What it pins down</th></tr>
+    <tr><td><code>MessageLevelTraverserTest</code></td><td>11</td><td>Null root, depth order, identity and
+      node-id dedup, refused properties, claimed-vs-real children, text/presence from one read, node cap,
+      unavailable viewport, geometry carry-through</td></tr>
+    <tr><td><code>CandidateClassifierTest</code></td><td>16</td><td>Every exclusion by named reason;
+      evidence never quotes text; chrome vs real message; invisible vs unknown visibility; custom class
+      judged on structure</td></tr>
+    <tr><td><code>MessageReconstructorTest</code></td><td>15</td><td>Geometry ordering, unplaced ⇒ no order
+      claim, no merging, multi-line stays one, repeats stay two, echo suppression, nothing invented, reasons
+      bounded and text-free, candidate ids not node-derived</td></tr>
+    <tr><td><code>SyntheticConversationFixtureTest</code></td><td>14</td><td>The fourteen mandated
+      end-to-end cases, F1–F14</td></tr>
+    <tr><td><code>ExtractionMetricsTest</code></td><td>11</td><td>Six annotated synthetic screens; every
+      metric carries its denominator; NOT MEASURED distinguished from a real zero</td></tr>
+    <tr><td><code>ExtractionPrivacyTest</code></td><td>6</td><td>Marker reaches records, then absent from
+      report, all <code>toString()</code>s, reasons, evidence and ids</td></tr>
+    <tr><td><code>InspectionLadderTest</code></td><td>9</td><td>Each gate independent; candidates without
+      boundaries stop at level 2; attribution needs ground truth; a clipped sample cannot be attested</td></tr>
+    <tr><td><code>InspectionControllerExtractionTest</code></td><td>8</td><td>Gates refuse extraction too;
+      choice frozen at arm time; one press = one extraction; structural stage identical either way; a
+      throwing stage becomes a reason, not a crash</td></tr>
+    <tr><td><code>ValidatedRecordAdapterTest</code></td><td>9</td><td>INCOMPLETE/UNSUPPORTED refused; only
+      accepted records cross; alignment never becomes a person; unknown timestamp stays null; no grooming
+      judgement produced</td></tr>
+  </table>
+</div>
+
+<!-- ============ PAGE 7 ============ -->
+<div class="brk">
+  <h3>The fourteen required fixtures</h3>
+  <table class="pair">
+    <tr><td><b>F1</b> Two-speaker conversation → ordered records, <b>no</b> senders attached</td>
+        <td><b>F8</b> Reversed/ambiguous order → reordered by geometry; traversal order not trusted</td></tr>
+    <tr><td><b>F2</b> Missing speaker labels → reconstruction states it has no senders</td>
+        <td><b>F9</b> Empty and null text → rejected apart; the run continues</td></tr>
+    <tr><td><b>F3</b> No timestamps → absent stays absent; order is not a timestamp</td>
+        <td><b>F10</b> Tree changing mid-inspection → reported unreliable, not clean</td></tr>
+    <tr><td><b>F4</b> Nested containers duplicating text → 2 echoes suppressed, one record per bubble</td>
+        <td><b>F11</b> Partially visible conversation → labelled partial</td></tr>
+    <tr><td><b>F5</b> Interface labels only → <code>UNSUPPORTED</code>, not an empty conversation</td>
+        <td><b>F12</b> Boundaries not established → 3 ambiguous kept, blocks a reconstructed verdict</td></tr>
+    <tr><td><b>F6</b> Multi-line messages → one record, line breaks kept</td>
+        <td><b>F13</b> Unsupported app / empty tree → empty tree and null root both <code>UNSUPPORTED</code></td></tr>
+    <tr><td><b>F7</b> Repeated identical text → stays two records</td>
+        <td><b>F14</b> Cancellation during inspection → extraction stage never runs; re-arm then works</td></tr>
+  </table>
+  <p>No private real conversation is used as a test fixture anywhere; every string is synthetic and marked
+    as such.</p>
+
+  <h2>8. Results — measured, observed, and still missing</h2>
+  <h3>8.1 Synthetic accuracy (six annotated screens, 13 expected turns)</h3>
+  <table>
+    <tr><th>Metric</th><th>Value</th><th>Denominator definition</th><th>Reading</th></tr>
+    <tr><td>Candidate precision</td><td><b>12/13</b></td><td>accepted records</td><td>1 false positive: a sender label kept as a message</td></tr>
+    <tr><td>Candidate recall</td><td><b>12/13</b></td><td>annotated turns</td><td>1 miss: a crowded row left ambiguous</td></tr>
+    <tr><td>Reconstruction precision</td><td><b>12/13</b></td><td>placed records</td><td>Undefined on the screen that placed nothing — reported as no denominator, not 0/0</td></tr>
+    <tr><td>Exact-text match</td><td><b>12/13</b></td><td>annotated turns</td><td>Verbatim agreement only; no normalisation applied</td></tr>
+    <tr><td>Message order</td><td><b>8/8</b></td><td>consecutive annotated pairs both placed</td><td>Pairs exist only on 4 of 6 screens</td></tr>
+    <tr><td>Speaker attribution</td><td><b>NOT MEASURED</b></td><td>(3 available)</td><td>No rule enabled by default, so the numerator does not exist — not a zero</td></tr>
+    <tr><td>Speaker attribution, opt-in rule</td><td><b>2/2</b></td><td>attempted attributions</td><td>One screen, self-declared unvalidated. Not a claim about any app</td></tr>
+    <tr><td>Timestamp identification</td><td><b>0/1</b></td><td>annotated stamp nodes</td><td>A <b>genuine zero</b>: the pipeline refuses to promote a bare text node into a timestamp</td></tr>
+    <tr><td>Ambiguous-result rate</td><td><b>1/6</b></td><td>screens</td><td>By design, on the crowded-row screen</td></tr>
+    <tr><td>Interface-text false positives</td><td><b>0/6</b></td><td>annotated chrome labels</td><td>Composer, send, search, overflow all rejected with named reasons</td></tr>
+  </table>
+  <div class="box warn">These are <b>conformance</b> numbers, not evidence about third-party apps. The
+    fixtures were designed against the specification they test. Real chat UIs add avatars, unread dividers,
+    reply quotes, reactions, receipts and rich cards that no fixture here models.</div>
+
+  <h3>8.2 Real-app structural compatibility — R1 to R8 (earlier phase, still valid)</h3>
+  <table>
+    <tr><th>#</th><th>App</th><th>Screen</th><th>Nodes</th><th>withText</th><th>descOnly</th><th>Chars</th><th>Depth</th></tr>
+    <tr><td>R1</td><td>Instagram 452.0.0.48.64</td><td>not labelled — not a chat</td><td>19</td><td><b>0</b></td><td>11</td><td><b>0</b></td><td>9</td></tr>
+    <tr><td>R2</td><td>Instagram Lite 533.0.0.9.105</td><td>open DM (researcher-stated)</td><td>80</td><td><b>16</b></td><td>0</td><td><b>205</b></td><td>5</td></tr>
+    <tr><td>R3</td><td>Instagram 452.0.0.48.64</td><td>open DM (researcher-stated)</td><td>55</td><td><b>18</b></td><td>12</td><td><b>245</b></td><td>6</td></tr>
+    <tr><td>R4</td><td>Google Messages</td><td>unidentified — 8 nodes</td><td>8</td><td>1</td><td>0</td><td>8</td><td>6</td></tr>
+    <tr><td>R5</td><td>Google Messages</td><td>conversation list? (unconfirmed)</td><td>46</td><td>4</td><td>8</td><td>70</td><td>10</td></tr>
+    <tr><td>R6</td><td>Google Messages</td><td>open thread? (unconfirmed)</td><td>20</td><td>8</td><td>3</td><td>135</td><td>8</td></tr>
+    <tr><td>R7</td><td>Google Messages</td><td>conversation list? (unconfirmed)</td><td>46</td><td>5</td><td>7</td><td>74</td><td>10</td></tr>
+    <tr><td>R8</td><td>Google Messages</td><td>same window as R7</td><td>46</td><td>5</td><td>7</td><td>74</td><td>10</td></tr>
+  </table>
+  <p><b>Headline:</b> text <i>is</i> reachable on conversation screens, and R1 was a false negative.
+    Availability depends entirely on which screen is foreground — one observation is a result about one
+    window, not about an app. <b>Shape is stable, content drifts:</b> R5 and R7 are the same 46-node screen
+    seven minutes apart, and <code>withText</code> moved 4→5 while nodes, depth and class count held
+    exactly. <b>Never quote the combined text-bearing column alone</b> — R1's 57% was all descriptions, R3's
+    54% was mostly real text, and they look alike. R4 is almost certainly not a messaging screen and is
+    excluded, not averaged.</p>
+</div>
+
+<!-- ============ PAGE 8 ============ -->
+<div class="brk">
+  <h3>8.3 Real-app extraction — three runs, Instagram, 2026-10-20 evening</h3>
+  <pre>18:09:08  cancelInspection -&gt; true          (human Stop/Cancel; retained content forgotten)
+18:09:58  outcome=FAILED  root=false        (RC-04: null root on a transition frame — first ever sighting)
+18:10:38  status=INCOMPLETE   sampled=56 accepted=11 ambiguous=4 rejected=41 order=GEOMETRY partial=true
+18:11:37  status=RECONSTRUCTED sampled=58 accepted=17 ambiguous=0 rejected=41 order=GEOMETRY partial=false
+18:28:08  status=RECONSTRUCTED sampled=56 accepted=16 ambiguous=0 rejected=40 order=GEOMETRY partial=false</pre>
+  <p><b>Proven:</b> the pipeline executes against a live third-party tree, resolves geometry-based reading
+    order, rejects 40–41 nodes per screen as non-message, never crashed, and kept every log line free of
+    message text across a consent revoke, cancels, four arms and three extractions. <b>Still unproven:</b>
+    correctness. The verdict swung from 11 to 17 to 16 accepted on near-identical structure and the cause is
+    <b>unexplained</b> — either the screen changed or the row-grouping flipped, and unlabelled runs cannot
+    tell them apart. <code>accepted=17</code> is not "17 messages extracted".</p>
+  <p><b>Device-only findings that qualify every future real number:</b> (1) node identity is unavailable on
+    Android — <code>getSourceNodeId()</code> is not public API and reaching it would need a hidden API, so
+    duplicate-visit suppression is unobservable on device and falls back to wrapper identity; (2) with both
+    parent ids null, the "same row" test loses its sibling clause and becomes geometry-only across the whole
+    screen, so a device <code>multiple-text-nodes-in-one-row</code> objection is weaker evidence than the
+    same objection in a unit test.</p>
+  <p><b>Researcher-reported, un-itemised:</b> reading the review screen after the 18:28 run, non-message
+    on-screen text appeared to be counted as messages. Recorded as a qualitative observation. No classifier
+    rule was added in response — tuning against one unlabelled screen overfits to Instagram's chrome and
+    risks deleting real messages.</p>
+
+  <h2>9. Limitations, open defects and what remains unproven</h2>
+  <table>
+    <tr><th>Limitation</th><th>Status</th></tr>
+    <tr><td>No ground truth exists for any real app, so accuracy is NOT MEASURED</td><td><span class="tag red">headline gap</span> blocks ladder levels 4–5 and every real metric</td></tr>
+    <tr><td>Fixtures were designed against the spec they test — conformance, not generalisation</td><td><span class="tag">inherent</span></td></tr>
+    <tr><td>Node identity unavailable on device; dedup unobservable</td><td><span class="tag amber">accepted</span> hidden API declined</td></tr>
+    <tr><td>Same-row test degrades to geometry-only on device</td><td><span class="tag amber">documented</span></td></tr>
+    <tr><td>Timestamp recovery has never fired positively — 0/1</td><td><span class="tag red">open</span></td></tr>
+    <tr><td>WhatsApp, Telegram, Signal allowlisted but not installed</td><td><span class="tag red">not observed at all</span></td></tr>
+    <tr><td>R4–R8 and RC-01/RC-02 screen labels still unknown; RC-04 now confirmed</td><td><span class="tag amber">open</span></td></tr>
+    <tr><td>No instrumented or on-device automated tests exist</td><td><span class="tag">by design</span> device behaviour rests on a manual checklist</td></tr>
+    <tr><td>Single emulator, Android 15, x86_64 — no physical device, no API 24–26 coverage despite minSdk 24</td><td><span class="tag amber">environment</span></td></tr>
+    <tr><td>Truncation semantics differ between stages: structural records it and still completes; extraction forces partial</td><td><span class="tag">deliberate</span> changing the first would invalidate R1–R8</td></tr>
+  </table>
+
+  <h3>Open defect: review-screen text overlap</h3>
+  <p>Reporting 16–17 records made adjacent rows print over one another. Cause: each record was drawn as two
+    separate text layers (a small header line plus a body line) inside a selection container nested in a
+    scrolling column. <b>Fix applied:</b> one text layer per record, and the list sets its own spacing.
+    Tests re-run at 18:33 → 156/0/0/0, then a full <code>--rerun-tasks</code> build, installed
+    successfully and relaunched.</p>
+  <div class="box warn"><b>This fix is reasoned, not visually confirmed.</b> It cannot be confirmed by this
+    harness — a screenshot of that screen would write Instagram message text into a file, which the privacy
+    rules forbid. The researcher must confirm it on the next run. The test emulator is currently switched
+    off, so the layout is unverified and the run log buffer is gone (all quoted lines above are preserved in
+    the project's own documentation).</div>
+
+  <h3>Deviations from the original plan, recorded rather than hidden</h3>
+  <table>
+    <tr><th>Planned</th><th>Built</th><th>Why</th></tr>
+    <tr><td>Five levels as an ordinal enum</td><td>Five independent booleans</td><td>An enum invites a
+      <code>level &gt;= n</code> check that re-collapses the claims the spec keeps separate</td></tr>
+    <tr><td>Adapter under <code>inspection/harness/</code></td><td>Under <code>model/</code></td>
+      <td>Its contract is with the model boundary, where the privacy-critical preprocessing tests already live</td></tr>
+    <tr><td>Node id implemented on device</td><td>Interface member with <b>no</b> device implementation</td>
+      <td>Requires a non-public API; the spec forbids it</td></tr>
+    <tr><td>A separate non-message rules class</td><td>Named branches inside the classifier</td>
+      <td>Each rule still returns its own reason; a class would add indirection with no test surface</td></tr>
+    <tr><td>Structural inspector to be extended</td><td>Left completely untouched</td>
+      <td>Defaulted members are inert unless called; keeping it identical is what preserves R1–R8</td></tr>
+  </table>
+</div>
+
+<!-- ============ PAGE 9 ============ -->
+<div class="brk">
+  <h2>10. Next research milestone</h2>
+  <ol>
+    <li><b>Produce one consented, hand-transcribed thread</b> — the transcription method is already defined
+      in the compatibility report. This is the critical path: it converts the first
+      <code>NOT MEASURED</code> rows into denominator-bearing numbers and makes ladder level 4 reachable.</li>
+    <li><b>Itemise the false positives</b> — 3–5 annotated "this record is wrong because it is ___" lines,
+      which turns the qualitative observation on page 8 into a rate and justifies specific, isolated rules.</li>
+    <li><b>Confirm the layout fix visually</b> and record which ladder levels a real screen reaches.</li>
+    <li><b>Label the unlabelled rows</b> (R4–R8, RC-01, RC-02) so existing evidence can be read as
+      thread-screen evidence.</li>
+    <li><b>Characterise the crowded-row failure on a real app</b> before trying to improve recall.</li>
+    <li><b>Find a lawful positive-timestamp signal</b>; without one, no time-ordered analysis is
+      defensible.</li>
+    <li>Only then run the extraction → preprocessing handoff on real data — still with the model
+      un-integrated, still only the researcher's own consented text.</li>
+  </ol>
+  <p><b>Explicitly out of scope, permanently:</b> scrolling, history navigation, clicking, background
+    monitoring, notification/clipboard/keystroke routes, view-ID-keyed rules, extra permissions, network
+    transmission, and model training on extracted text.</p>
+
+  <h2>11. Glossary in plain language</h2>
+  <table>
+    <tr><th>Term</th><th>What it means here</th></tr>
+    <tr><td><b>Accessibility node</b></td><td>One widget on screen as Android describes it to assistive
+      technology — a class name, optional text, an optional description, a rectangle, and child widgets.</td></tr>
+    <tr><td><b>Tree / traversal / BFS</b></td><td>Screens nest like folders inside folders. A traversal
+      visits every one; breadth-first means "finish this level before going deeper".</td></tr>
+    <tr><td><b>Root</b></td><td>The outermost node. "root = false" means Android would not hand over the
+      screen at that instant — usually a transition frame.</td></tr>
+    <tr><td><b>Arming</b></td><td>Pressing Start. The tool waits for one qualifying event, reads once, then
+      disarms itself.</td></tr>
+    <tr><td><b>withText</b></td><td>Nodes exposing real text — the actual text surface, and the column that
+      matters for messages.</td></tr>
+    <tr><td><b>descOnly</b></td><td>Nodes with only a <i>content description</i>: a label written for a
+      screen reader about a control ("Send button"), not message content.</td></tr>
+    <tr><td><b>Text-bearing</b></td><td>The two above added together. Never quote it alone — it hides which
+      kind of text you are looking at.</td></tr>
+    <tr><td><b>Candidate / accepted / ambiguous / rejected</b></td><td>Looks like a message but not accepted
+      yet / confident / genuinely unsure, so kept and marked / concluded to be interface furniture, with a
+      stated reason.</td></tr>
+    <tr><td><b>Container echo</b></td><td>A wrapper widget repeating its child's text. Counting both would
+      double the conversation, so the wrapper is dropped and the child kept.</td></tr>
+    <tr><td><b>Geometry ordering</b></td><td>Sorting by on-screen position (top to bottom) rather than by the
+      order the widgets happened to be listed.</td></tr>
+    <tr><td><b>Partial visible sample</b></td><td>The thread ran off the edge of the screen, so what was
+      captured is not the whole conversation.</td></tr>
+    <tr><td><b>Ladder level</b></td><td>The five separate claims a run can make, from "inspection completed"
+      up to "complete conversation validated". Each needs its own proof.</td></tr>
+    <tr><td><b>Ground truth / annotated sample</b></td><td>A version of the screen transcribed by hand, so
+      output can be compared against something. Its absence is why real-app accuracy is NOT MEASURED.</td></tr>
+    <tr><td><b>Handoff</b></td><td>Passing accepted records to the text-cleaning stage. The model itself is
+      not connected, so nothing is classified.</td></tr>
+    <tr><td><b>NOT MEASURED</b></td><td>The comparison data does not exist. Different from 0, which would
+      mean it exists and the tool scored nothing.</td></tr>
+  </table>
+</div>
+
+<!-- ============ PAGE 10 ============ -->
+<div class="brk">
+  <h2>12. Where the evidence lives</h2>
+  <table>
+    <tr><th>Artefact</th><th>Contains</th></tr>
+    <tr><td><code>docs/11_REAL_APP_COMPATIBILITY_REPORT.md</code></td><td>R1–R8 structural log, the RC
+      failure-mode table, the transcription method, the correction notices. <b>Unmodified this
+      phase.</b></td></tr>
+    <tr><td><code>docs/12_MESSAGE_LEVEL_EXTRACTION_IMPLEMENTATION_LOG.md</code></td><td>Full audit, design
+      decisions, implementation stages C.1–C.11 with original behaviour and files changed, every command and
+      its real output, per-class test tables, the device log, plan close-out against all 14 identified gaps,
+      and the evening addendum.</td></tr>
+    <tr><td><code>docs/13_MESSAGE_RECONSTRUCTION_VALIDATION_REPORT.md</code></td><td>Environment, a 30-row
+      capability status table (verified / partially verified / failed / untested), the metric tables with
+      denominators, structural failure examples, privacy verification, limitations.</td></tr>
+    <tr><td><code>docs/evidence/</code></td><td>The archived build and test logs behind the numbers in
+      section 7, named with their real timestamps.</td></tr>
+    <tr><td><code>app/src/test/…</code></td><td>All 160 tests, including the 14 named fixtures, the
+      privacy marker tests and the four settle-delay token tests.</td></tr>
+  </table>
+
+  <div class="box">
+    <b>One-sentence conclusion.</b> The prototype now genuinely rebuilds visible screens into ordered message
+    records, refuses to invent anything it cannot see, keeps its privacy guarantees intact under real data,
+    and has run against real Instagram three times — and the honest state of the research question is that
+    <b>none of that yet constitutes evidence that the reconstruction is correct</b>, because the one missing
+    ingredient is a hand-transcribed conversation to compare against.</div>
+
+  <h2>13. Decisions that governed this phase</h2>
+  <ul>
+    <li><b>Never enable or arm programmatically.</b> The accessibility toggle is a human-only act; three
+      workarounds were offered and all three were refused, and the refusals are recorded in the project
+      logs.</li>
+    <li><b>Never fill a row from a plausible number.</b> An unmeasured metric is written NOT MEASURED; a
+      genuine zero is written as a zero and explained; nothing is back-filled from a remembered value.</li>
+    <li><b>Build success is not extraction success.</b> Every claim here is separated into what compiled,
+      what was tested, what was observed on a device, and what remains unproven.</li>
+    <li><b>No accuracy claim without ground truth</b>, and no compatibility claim for an app that was never
+      installed.</li>
+  </ul>
+
+  <div class="foot"><b>Verification policy used throughout:</b> no test is reported as passing unless it was
+    executed and its output read; no metric is reported without its denominator; an unmeasured metric is
+    written NOT MEASURED, never zero; a build succeeding is not a claim that extraction works; and the
+    accessibility-service consent gate has never been automated or worked around. &nbsp;·&nbsp; Report
+    compiled 2026-10-21 from the executed log in <code>docs/12</code> and the validation data in
+    <code>docs/13</code>.</div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AccessibilityService configuration for the one-shot structural compatibility experiment.
+
+  Deliberately minimal capabilities, matching the research constraints:
+  * packageNames = a short ALLOWLIST of messaging apps the researcher may choose as the
+    compatibility target. Events from any other application are never delivered to us at all.
+    At connect time the service narrows this further to the single selected app via
+    setServiceInfo(), so the allowlist is the outer bound and the selection is the inner one.
+  * canRetrieveWindowContent = true is the minimum needed to read the ACTIVE window's
+    node tree for STRUCTURAL statistics only (counts, depth, widget classes — never the text).
+  * accessibilityEventTypes = only window-state changes plus focus, which is enough to learn
+    that the target window became active so the armed one-shot inspection can fire once.
+  * flagRetrieveInteractiveWindows lets getRootInActiveWindow resolve the target window.
+  There is NO flagRequestFilterKey needed, NO touch exploration, NO gesture, NO window content
+  capture beyond the active window, and NO screenshots.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeViewFocused"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100"
+    android:packageNames="com.google.android.apps.messaging,com.instagram.android,com.instagram.lite,com.whatsapp,org.telegram.messenger,org.thoughtcrime.securesms" />

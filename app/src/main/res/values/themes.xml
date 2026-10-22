@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A plain platform NoActionBar theme. All real theming is done in Compose Material 3
+      (see ui/theme/Theme.kt), so this XML theme only needs to avoid the classic action bar
+      and give the window a sensible starting background. It deliberately does not depend on
+      AppCompat so we can keep the dependency surface small.
+    -->
+    <style name="Theme.GroomingResearchDemo" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

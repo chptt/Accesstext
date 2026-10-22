@@ -1,0 +1,29 @@
+# Gradle build state and outputs
+.gradle/
+.kotlin/
+build/
+**/build/
+
+# Machine-specific SDK path
+local.properties
+
+# IDE files
+.idea/
+*.iml
+captures/
+
+# Local-only, not part of the research prototype
+AndroidSdk/
+vapt_work/
+
+# Root-level development logs
+/build-log.txt
+/test-log.txt
+/emu.log
+
+# Packaged artifacts
+*.apk
+
+# OS files
+.DS_Store
+Thumbs.db

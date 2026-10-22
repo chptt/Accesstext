@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Grooming Detection Research Demo</string>
+    <string name="app_subtitle">Accessibility Inspection and Text Preprocessing</string>
+
+    <string name="accessibility_service_label">Grooming Research Inspection (structural only)</string>
+    <string name="accessibility_service_description">
+        Used only for a manually armed, one-time structural experiment. When you start an
+        inspection, it walks the accessibility tree of the currently active window of the one
+        messaging app you selected as the test target and reports counts, tree depth and widget
+        class names. It does not read, store, or transmit message text, it never inspects any app
+        outside a short allowlist of messaging apps, and it runs once per button press rather than
+        continuously. You must turn this service on yourself, and you can turn it off at any time.
+    </string>
+</resources>
