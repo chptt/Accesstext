@@ -58,8 +58,10 @@ delivers no events for the others.
      confirm the dashboard's *Compatibility target* row reads that package.
    - The dashboard shows the *armed* package separately from the *configured* one, so a mismatch
      here is visible before, not after, an inspection.
-5. **Start One-Time Inspection**. The indicator reads *Waiting for a qualifying accessibility
-   event*. Nothing has been inspected yet.
+5. **Open Inspection Controls** from Home, then press one of the two Start buttons:
+   **Start Inspection — Node Counts Only** for the structural record, or **Start Inspection + Message
+   Extraction** to add the message-level second pass over the same snapshot. The indicator reads
+   *Waiting for a qualifying accessibility event*. Nothing has been inspected yet.
 6. Bring the messaging app to the foreground and open the screen you want to characterise
    (conversation list, or one open thread). **Stop there.** Do not scroll, do not tap anything in
    that app for the purpose of the experiment; the inspection consumes the first qualifying

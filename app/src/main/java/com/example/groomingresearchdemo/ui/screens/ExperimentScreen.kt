@@ -2,13 +2,11 @@ package com.example.groomingresearchdemo.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -17,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.groomingresearchdemo.inspection.ArmResult
@@ -37,10 +34,11 @@ import com.example.groomingresearchdemo.ui.StatusRow
  * qualifying event from the app selected on the target screen. It never re-arms itself and never
  * runs on a timer.
  *
- * The message-level opt-in is a second, separate deliberate act on the same press. Unticked, the
- * inspection is exactly the structural pass that produced R1-R8. Ticked, the same single root read
- * is walked a second time to look for message-shaped nodes — and the state of the box is captured at
- * arm time, so it cannot be changed underneath an inspection that is already waiting.
+ * The two modes are chosen by which Start button is pressed: node counts only, or node counts plus
+ * message-level extraction. Both are one deliberate press and one root read; the extraction mode
+ * walks the SAME snapshot a second time. The choice is captured at arm time, so it cannot change
+ * underneath an inspection that is already waiting, and text is still only rendered on the separate
+ * review screen.
  */
 @Composable
 fun ExperimentScreen(
@@ -49,8 +47,10 @@ fun ExperimentScreen(
 ) {
     val scroll = rememberScrollState()
     var armMessage by remember { mutableStateOf<String?>(null) }
-    var extractionOptIn by remember { mutableStateOf(false) }
     val installed = ResearchStore.isPackageInstalled(uiState.targetPackage)
+    val canArm = uiState.consentStatus == ConsentStatus.ACCEPTED &&
+        uiState.serviceEnabled &&
+        uiState.armStatus == ArmStatus.NOT_ARMED
 
     Column(
         modifier = Modifier
@@ -64,9 +64,11 @@ fun ExperimentScreen(
             Text(
                 "You arm the inspection once. When you then bring the app under test to the " +
                     "foreground, Android delivers a window event for that package. The service " +
-                    "reads the ACTIVE window's accessibility tree and reports structural " +
-                    "statistics — node counts, text availability, widget classes, depth — then " +
-                    "disarms. It does not scroll, click, send, navigate, screenshot, or record."
+                    "reads the ACTIVE window's accessibility tree once and reports structural " +
+                    "statistics — node counts, text availability, widget classes, depth. If you " +
+                    "chose the extraction mode, the same snapshot is walked a second time for " +
+                    "message candidates before the service disarms. It does not scroll, click, " +
+                    "send, navigate, screenshot, or record."
             )
             StatusRow("App under test", uiState.targetPackage, emphasized = true)
             StatusRow(
@@ -80,37 +82,33 @@ fun ExperimentScreen(
             )
         }
 
-        InfoCard(title = "Message-level extraction (research prototype)") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(
-                    checked = extractionOptIn,
-                    onCheckedChange = { extractionOptIn = it },
-                    enabled = uiState.armStatus == ArmStatus.NOT_ARMED,
-                )
-                Text(
-                    "Also classify message candidates and attempt a reconstruction",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+        InfoCard(title = "Two one-press modes") {
             Text(
-                "What this adds: a second pass over the SAME tree snapshot that samples per-node " +
-                    "geometry and structure, applies the documented rule-based classifier, and " +
-                    "reports candidate / accepted / ambiguous / rejected counts beside the structural " +
-                    "ones. What it does not add: any new trigger, any extra tree read, any scroll, " +
-                    "any retry, or any storage. Candidate text exists in RAM for one inspection only, " +
-                    "is overwritten by the next one, and is dropped on cancel, revoke, disconnect or " +
-                    "Forget. The results screen stays a structural summary unless you separately " +
-                    "choose to review the sample.",
+                "Node counts only — the structural pass that produced R1–R8: nodes visited, text " +
+                    "availability, widget classes, depth and truncation, with no message records.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                "Node counts + message extraction — the same single root read, then a second pass " +
+                    "over that snapshot: sample geometry and structure, apply the documented " +
+                    "rule-based classifier, and report candidate / accepted / ambiguous / rejected " +
+                    "counts beside the structural ones. The results screen stays structural; " +
+                    "message records appear only if you separately open the review screen.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                "Neither mode adds a second trigger, an extra tree read, a scroll, a retry or any " +
+                    "storage. Candidate text exists in RAM for one inspection only, is overwritten " +
+                    "by the next one, and is dropped on cancel, revoke, disconnect or Forget. The " +
+                    "mode is captured when you press Start, so changing it afterwards cannot widen " +
+                    "an inspection that is already waiting.",
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
                 "Unvalidated on real apps. No annotated, consented ground-truth sample exists yet, " +
-                    "so no precision or recall number for this stage may be quoted — including by " +
-                    "this screen. Sender labels and timestamps are OFF by default and are never " +
-                    "invented to fill a gap.",
+                    "so no precision or recall number for the extraction stage may be quoted — " +
+                    "including by this screen. Sender labels and timestamps are OFF by default and " +
+                    "are never invented to fill a gap.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -125,16 +123,30 @@ fun ExperimentScreen(
             onClick = {
                 ResearchStore.refreshServiceStatus()
                 armMessage = describeArmResult(
-                    ResearchStore.startInspection(messageLevelExtraction = extractionOptIn),
+                    ResearchStore.startInspection(messageLevelExtraction = false),
                     uiState.targetPackage,
+                    withExtraction = false,
                 )
             },
-            enabled = uiState.consentStatus == ConsentStatus.ACCEPTED &&
-                uiState.serviceEnabled &&
-                uiState.armStatus == ArmStatus.NOT_ARMED,
+            enabled = canArm,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (extractionOptIn) "Start Inspection + Message-Level Stage" else "Start One-Time Inspection")
+            Text("Start Inspection — Node Counts Only")
+        }
+
+        Button(
+            onClick = {
+                ResearchStore.refreshServiceStatus()
+                armMessage = describeArmResult(
+                    ResearchStore.startInspection(messageLevelExtraction = true),
+                    uiState.targetPackage,
+                    withExtraction = true,
+                )
+            },
+            enabled = canArm,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Start Inspection + Message Extraction")
         }
 
         OutlinedButton(
@@ -189,12 +201,20 @@ fun ExperimentScreen(
     }
 }
 
-private fun describeArmResult(result: ArmResult, target: String): String = when (result) {
+private fun describeArmResult(
+    result: ArmResult,
+    target: String,
+    withExtraction: Boolean,
+): String = when (result) {
     ArmResult.CONSENT_REQUIRED -> "Cannot arm: consent not accepted."
     ArmResult.SERVICE_REQUIRED -> "Cannot arm: accessibility service is not enabled."
     ArmResult.TARGET_REQUIRED -> "Cannot arm: no app under test is selected."
     ArmResult.ALREADY_ARMED -> "An inspection is already armed."
-    ArmResult.ARMED -> "Armed for $target. Now bring that app to the foreground to produce one qualifying event."
+    ArmResult.ARMED -> if (withExtraction) {
+        "Armed for $target with message extraction. Now bring that app to the foreground to produce one qualifying event."
+    } else {
+        "Armed for $target (node counts only). Now bring that app to the foreground to produce one qualifying event."
+    }
 }
 
 private fun armIndicator(uiState: ResearchUiState): String = when (uiState.armStatus) {

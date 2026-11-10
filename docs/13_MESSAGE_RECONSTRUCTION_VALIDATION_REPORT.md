@@ -346,8 +346,9 @@ future real-app number):
 1. **Produce one consented annotated thread** — Google Messages on `emulator-5554`, hand-transcribed
    per docs/11 §9. This is the critical path: it converts the first `NOT MEASURED` rows in §5.2 into
    denominator-bearing numbers and makes ladder level 4 reachable.
-2. **Run the docs/12 Phase F checklist once**, extraction ticked, and record the row in §3 — including
-   which ladder levels were met and the reason strings for those that were not.
+2. **Run the docs/12 Phase F checklist once**, with **Start Inspection + Message Extraction**
+   selected, and record the row in §3 — including which ladder levels were met and the reason strings
+   for those that were not.
 3. **Label R4–R8 and the RC rows** so the existing structural evidence can be read as thread-screen
    evidence rather than unknown-screen evidence.
 4. **Characterise the crowded-row failure on a real app** (S4's shape) before attempting to improve

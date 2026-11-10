@@ -10,17 +10,20 @@ This matches `InspectionController` and `ChatInspectionService` precisely.
 1. **App launch.** `GroomingResearchApp.onCreate()` → `ResearchStore.init()` loads two non-sensitive
    values: the consent decision and the previously chosen app under test. `MainActivity` shows the
    Home dashboard.
-2. **Consent check.** `consentStatus` starts `NOT_GIVEN`. Start Inspection is disabled.
+2. **Consent check.** `consentStatus` starts `NOT_GIVEN`. Both Start buttons are disabled.
 3. **Manual service enablement.** User taps Enable Accessibility Service → opens Settings → turns on
    the service → returns → taps Re-check status. `computeServiceEnabled` confirms it and
    `serviceEnabled = true`. On `onServiceConnected` the service narrows its own
    `serviceInfo.packageNames` to the selected target, sets `serviceBoundBySystem = true` and calls
    `forceDisarm()`.
 3a. **Target selection.** On the Choose app under test screen the researcher picks one of the
-   five allowlisted messaging packages (or types another package, which is recorded but still
+   six allowlisted messaging packages (or types another package, which is recorded but still
    bounded by the allowlist). `ResearchStore.setTargetPackage()` persists that one package name and
    notifies the connected service to re-narrow. Selecting an app starts nothing.
-4. **User presses Start One-Time Inspection.** `ResearchStore.startInspection()` →
+4. **User presses Start.** Home's primary button only opens the Experiment screen
+   (**Open Inspection Controls**). There the researcher chooses one of two one-press buttons —
+   **Start Inspection — Node Counts Only** or **Start Inspection + Message Extraction** — and that
+   press calls `ResearchStore.startInspection(messageLevelExtraction = …)` →
    `controller.arm(consentAccepted = true, serviceEnabled = true, targetPackage = <selected>)`.
 5. **Request becomes armed.** `armStatus = ARMED` and `armedTarget = <selected>` — the package is
    captured **now**, so changing the selection later cannot redirect a waiting inspection.
@@ -28,10 +31,15 @@ This matches `InspectionController` and `ChatInspectionService` precisely.
 6. **Android sends an accessibility event.** The user brings the app under test to the foreground;
    because the config subscribes to window/focus events for that package, the OS delivers one.
 7. **Service checks the package name.** `onAccessibilityEvent` reads `event.packageName`.
-8. **Service checks whether an inspection is armed.** It calls
-   `ResearchStore.handleAccessibilityEvent(pkg) { rootInActiveWindow?… }` → `controller.handleEvent`.
-9. **The request is consumed.** Inside `handleEvent`, only if `armStatus == ARMED` **and**
-   `packageName == armedTarget`, the state flips to `EXECUTING` **before** the tree is opened.
+8. **Service checks whether an inspection is armed and captures its token.** It calls
+   `ResearchStore.armTokenFor(pkg)`. A null result means nothing is armed for that package, and the
+   service returns without scheduling anything. Otherwise it queues **exactly one** deferred read with
+   `postDelayed(..., 1_500 ms)`.
+9. **The request is consumed when that read fires.** It calls
+   `ResearchStore.handleAccessibilityEvent(pkg, token) { rootInActiveWindow?… }` →
+   `controller.handleEvent`. Only if `armStatus == ARMED`, `packageName == armedTarget` **and** the
+   token still matches does the state flip to `EXECUTING` **before** the tree is opened; a stale token
+   (cancel or re-arm in the 1.5 s window) is rejected without touching the tree.
 10. **Active root obtained.** The lazy `rootProvider()` runs → `rootInActiveWindow` → wrapped as a
     `RealAccessibilityNodeView`.
 11. **Tree traversed.** `StructuralInspector.inspect(root)` walks breadth-first.
@@ -58,13 +66,15 @@ sequenceDiagram
   U->>UI: choose app under test
   UI->>S: setTargetPackage(pkg)  (persisted, non-sensitive)
   S-->>SVC: onTargetPackageChanged -> setServiceInfo(narrowed)
-  U->>UI: Start One-Time Inspection
-  UI->>S: startInspection() -> arm(consent, service, target)
-  S-->>UI: ARMED (armStatus=ARMED, armedTarget=target)
+  U->>UI: Open Inspection Controls, then press one Start button
+  UI->>S: startInspection(messageLevelExtraction = …) -> arm(consent, service, target)
+  S-->>UI: ARMED (armStatus=ARMED, armedTarget=target, mode frozen)
   U->>SYS: bring the app under test to the foreground
   SYS->>SVC: onAccessibilityEvent(pkg)
-  SVC->>S: handleAccessibilityEvent(pkg, lazyRootProvider)
-  S->>S: armStatus==ARMED && pkg==armedTarget ? consume -> EXECUTING
+  SVC->>S: armTokenFor(pkg) (null -> return, nothing scheduled)
+  SVC->>SVC: postDelayed(1500 ms) — exactly one queued read
+  SVC->>S: handleAccessibilityEvent(pkg, token, lazyRootProvider)
+  S->>S: ARMED && pkg==armedTarget && token matches ? consume -> EXECUTING
   S->>SVC: rootProvider()
   SVC-->>S: rootInActiveWindow (or null)
   S->>S: StructuralInspector.inspect(root)

@@ -55,8 +55,10 @@ slide outline, and 44 panel questions with answers.
    *"I do not enable this programmatically"*) → return → **Re-check status**.
 4. **Choose app under test** → pick a package from the allowlist → the row shows *installed / not
    installed*. Explain the three restriction layers.
-5. **Start One-Time Inspection** → indicator: "Waiting for a qualifying accessibility event"; note the
-   **armed-for** package is now frozen.
+5. **Open Inspection Controls** → press **Start Inspection — Node Counts Only** (the default demo
+   mode) → indicator: "Waiting for a qualifying accessibility event"; note the **armed-for** package
+   and the chosen mode are now frozen. Mention the second button, **Start Inspection + Message
+   Extraction**, which adds the message-level second pass over the same one snapshot.
 6. Show **Stop / Cancel** → cancel once, and explain it disarms immediately and records CANCELLED.
 7. Arm again → switch to the chosen app, land on a screen → return → **View Results** → structural
    counts, text availability, widget classes, notes.

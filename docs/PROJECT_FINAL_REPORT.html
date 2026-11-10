@@ -72,9 +72,9 @@
     send anything.</p>
   <p>Two readings come from that one look at the screen. The <b>first</b> counts structure — how many
     elements are on screen, how many expose text, how deep the layout goes. That is the compatibility
-    evidence, unchanged from the earlier phase. The <b>second</b>, added now and only if a box is ticked,
-    tries to go further: work out which elements are individual chat messages, put them in reading order,
-    and rebuild them as message records.</p>
+    evidence, unchanged from the earlier phase. The <b>second</b>, added now and only if the extraction
+    Start button is chosen, tries to go further: work out which elements are individual chat messages,
+    put them in reading order, and rebuild them as message records.</p>
 
   <h2>The honest headline</h2>
   <div class="box warn">
@@ -163,10 +163,11 @@
     from Settings, after reading what it can do. This harness will not do it by <code>adb</code>, and has
     refused three attempts to work around that (a settings write, a cross-app UI dump, synthetic taps). The
     consequence matters: <b>no automated real-app validation is possible</b>, so every real-device row in
-    this report came from a human pressing a button. <b>Gate 2 — the extraction tick-box.</b> The
-    message-level stage is off unless explicitly ticked, and the choice is captured at the moment of
-    arming; unticking afterwards cannot widen or narrow an inspection the researcher already consented to.
-    The target app is frozen the same way.</p>
+    this report came from a human pressing a button. <b>Gate 2 — the extraction choice.</b> The
+    message-level stage is never automatic: the experiment screen offers two one-press Start buttons,
+    node counts only or node counts + message extraction. The chosen mode is captured at the moment of
+    arming; changing it afterwards cannot widen or narrow an inspection the researcher already consented
+    to. The target app is frozen the same way.</p>
 
   <h2>2. What the tool is <i>not</i></h2>
   <ul>
@@ -186,8 +187,8 @@
 
   <h2>3. How it works — the pipeline</h2>
   <div class="flow">
-    <div class="step"><b>1 · Arm</b>Researcher presses Start. Consent, service and target are checked; the
-      extraction tick-box is frozen here.</div>
+    <div class="step"><b>1 · Arm</b>Researcher presses one of the two Start buttons. Consent, service,
+      target and the chosen mode are frozen here.</div>
     <div class="step"><b>2 · One event</b>The target app's window-change event arrives. State flips to
       EXECUTING <i>before</i> the tree opens, so a second event cannot trigger a second read.</div>
     <div class="step"><b>3 · Open once</b>A lazy provider hands over the accessibility root. If the
@@ -298,8 +299,8 @@ parent(): AccessibilityNodeView?   nodeId(): Long?   aggregatesDescendantText():
     flag, second stage), <code>InspectionResult</code> (optional reconstruction),
     <code>RealAccessibilityNodeView</code> (device reads behind <code>runCatching</code>),
     <code>ResearchStore</code> (one retained reconstruction, <code>forgetExtractedContent()</code>),
-    <code>ResearchUiState</code>, <code>RootScreen</code>, <code>ExperimentScreen</code> (tick-box + review
-    entry), <code>ResultsScreen</code> (count set + ladder), <code>ReviewScreen</code> (layout fix, page 8),
+    <code>ResearchUiState</code>, <code>RootScreen</code>, <code>ExperimentScreen</code> (two Start buttons +
+    review entry), <code>ResultsScreen</code> (count set + ladder), <code>ReviewScreen</code> (layout fix, page 8),
     <code>FakeNode</code> (test fake gained bounds, flags, parent, node ids and throwing shapes).</p>
 
   <h3>Untouched by design — and why that matters</h3>

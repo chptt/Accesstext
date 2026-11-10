@@ -1009,9 +1009,9 @@ while the plan above assumed Google Messages.
 
 At the researcher's request, a 10-page plain-language-plus-technical summary was written from this log
 and docs/13: [`PROJECT_FINAL_REPORT.html`](PROJECT_FINAL_REPORT.html) and the PDF rendered from it,
-[`PROJECT_FINAL_REPORT.pdf`](PROJECT_FINAL_REPORT.pdf) (412,748 bytes at first delivery; 413,017 bytes
-after the 2026-10-21 settle-delay re-render to 413,013 bytes, **10 pages** in both cases — page count
-read from the rendered file, not assumed). Renderer:
+[`PROJECT_FINAL_REPORT.pdf`](PROJECT_FINAL_REPORT.pdf) (412,748 bytes at first delivery; 413,013 bytes
+after the 2026-10-21 settle-delay re-render; 413,189 bytes after the 2026-10-22 two-button update —
+**10 pages** in every case, page count read from the rendered file, not assumed). Renderer:
 `chrome.exe --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=…`; the first render came out
 at 17 pages, so the print CSS was tightened and the prose compressed until every designed page fit one
 printed page. No new claim appears in it that is not already in this log or docs/13, and the NOT
@@ -1073,5 +1073,62 @@ No traversal wall-clock time was measured, so the claim is "the read waits 1.5 s
 faster" or "the read always finds a root". Documentation was corrected accordingly: docs/04 ("no
 continuous inspection"), docs/13 §7 (privacy table), and the report's "Not a monitor" bullet no longer
 claim that `Handler`/`postDelayed` are absent; the re-rendered
-[`PROJECT_FINAL_REPORT.pdf`](PROJECT_FINAL_REPORT.pdf) is 413,013 bytes and **10 pages**, re-checked
-from the rendered file.
+[`PROJECT_FINAL_REPORT.pdf`](PROJECT_FINAL_REPORT.pdf) was 413,013 bytes and **10 pages**, re-checked
+from the rendered file (later 413,189 bytes after the 2026-10-22 two-button update, still 10 pages).
+
+### Two one-press Start buttons, 2026-10-22
+
+**Original behaviour.** The Experiment screen had one Start button plus a checkbox. Extraction ran only
+if the box was ticked before pressing Start, so the demo took two interactions (tick, then Start).
+
+**The change.** The checkbox is gone. The screen now has two one-press buttons:
+
+- **Start Inspection — Node Counts Only** — calls `startInspection(messageLevelExtraction = false)`,
+  exactly the structural pass that produced R1–R8.
+- **Start Inspection + Message Extraction** — calls `startInspection(messageLevelExtraction = true)`;
+  the same single root read, then the second pass over that snapshot.
+
+Both go through the existing arm gates, both freeze the mode at arm time, and the message text is still
+only rendered on the separate review screen. The armed-status message and the state card say which mode
+was chosen.
+
+**Why.** The researcher asked for an easier demo for the 2026-10-23 presentation. An earlier request to
+make every Start extract automatically was **not** implemented: §4/§7 require the message-level decision
+to be a deliberate per-session choice, with the structural summary as the default. Two labelled Start
+buttons keep that choice explicit while reducing the interaction to one press.
+
+**Home entry point.** The first cut left Home's old primary button arming a structural-only inspection
+directly. That would have skipped the mode choice and left both new buttons disabled on arrival, so Home
+now only refreshes service status and navigates with **Open Inspection Controls**; the arming press
+happens on the Experiment screen, where the two labelled buttons live.
+
+**Files changed.** `ExperimentScreen.kt` and `HomeScreen.kt` (UI only). No controller, service, extractor
+or test logic was touched.
+
+**Verification.** `./gradlew.bat --offline --rerun-tasks :app:testDebugUnitTest :app:assembleDebug` after
+the Home fix → `BUILD SUCCESSFUL in 1m 23s`, 43 actionable tasks executed; JUnit XML **160 tests,
+0 failures, 0 errors, 0 skipped**. APK `app-debug.apk` 12,114,117 bytes (Oct 22 14:27). Emulator
+relaunched from the AVD, `adb -s emulator-5554 install -r` → `Success`, app launched as pid 3838,
+`ChatInspectionService` shown as a bound and enabled service in `dumpsys accessibility`. The installed
+`base.apk` was pulled back and hashed: SHA-256
+`bba15c749fe67175a28493c8118a050c1631548c0b444aa9e6d2ab531033bbdc`, identical to the local artifact,
+so the running build is exactly this one. Log archived
+as [`evidence/phaseH_two_button_modes_build_2026-10-22.log`](evidence/phaseH_two_button_modes_build_2026-10-22.log)
+(the intermediate 58 s build is superseded by this one).
+
+**Not verified.** The new button layout has not been visually confirmed: device screenshots and UI
+dumps are blocked by the standing privacy boundary, so this run verified compilation, tests,
+installation and service binding only. It has not been exercised on a physical phone.
+
+**Docs updated.** README usage steps, docs/03 and docs/04 (Home → "Open Inspection Controls", then
+choose one of the two Start buttons; the allowlist count corrected to six), docs/07, docs/11, docs/13's
+next-milestone step, and the report's Gate 2 and pipeline wording; the PDF was re-rendered
+(413,189 bytes) and its page count re-checked at 10.
+
+**Home description removed, 2026-10-22.** At the researcher's request the long explanatory paragraph
+was deleted from `HomeScreen.kt`, leaving the title, subtitle, status card and actions. Rebuilt with
+`:app:testDebugUnitTest :app:assembleDebug` → `BUILD SUCCESSFUL in 19s`; JUnit XML still **160 tests,
+0 failures, 0 errors, 0 skipped**. APK 12,114,117 bytes; reinstalled (`Success`), app running as
+pid 6261, accessibility service bound. The installed `base.apk` hash again matches the local artifact
+(SHA-256 `853c699a7e9d9c886a780c93ad8de97e2995204da355f7a19587b3c03736dbed`). Log archived as
+[`evidence/phaseI_home_description_removed_build_2026-10-22.log`](evidence/phaseI_home_description_removed_build_2026-10-22.log).

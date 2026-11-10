@@ -48,15 +48,6 @@ fun HomeScreen(
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
         )
-        Text(
-            "A consent-based research demonstration for a B.Tech final-year project on online " +
-                "grooming detection. It performs a manually armed, one-time STRUCTURAL inspection " +
-                "of a messaging app's accessibility tree to test real-app compatibility, and keeps " +
-                "text preprocessing separate: synthetic fixtures in the laboratory, plus an " +
-                "explicit authorized-import screen for content you are permitted to process. " +
-                "No data leaves the device.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
 
         InfoCard(title = "Current status") {
             StatusRow("Consent", consentLabel(uiState.consentStatus), emphasized = uiState.consentStatus == ConsentStatus.ACCEPTED)
@@ -88,13 +79,11 @@ fun HomeScreen(
                 Button(
                     onClick = {
                         ResearchStore.refreshServiceStatus()
-                        ResearchStore.startInspection()
                         onNavigate(Screen.EXPERIMENT)
                     },
-                    enabled = uiState.consentStatus == ConsentStatus.ACCEPTED && uiState.serviceEnabled,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Start One-Time Inspection")
+                    Text("Open Inspection Controls")
                 }
                 OutlinedButton(
                     onClick = { ResearchStore.cancelInspection() },

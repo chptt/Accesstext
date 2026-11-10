@@ -234,21 +234,24 @@ Package layout:
 
 ## T. `ui/screens/*.kt`
 
-- **HomeScreen** — dashboard: title, subtitle, description, seven separate status rows (consent,
+- **HomeScreen** — dashboard: title, subtitle, seven separate status rows (consent,
   service, compatibility target, armed-for, last experiment, count, reports held), and the action
-  buttons. Start is disabled unless consent + service are verified. Cancel is enabled only while
-  actually armed.
+  buttons. **Open Inspection Controls** only navigates; the two Start buttons on the Experiment
+  screen are disabled unless consent + service are verified. Cancel is enabled only while actually
+  armed.
 - **ConsentScreen** — full disclosure bullets including the feasibility framing and the
   third-party-consent requirement, Accept/Decline, and a Revoke control once accepted.
 - **ServiceSetupScreen** — manual steps, an "Open accessibility settings" button
   (`Settings.ACTION_ACCESSIBILITY_SETTINGS`, with a graceful fallback), a "Re-check status" button,
   and the verified status.
-- **TargetScreen** — the five allowlisted messaging apps as chips with installed/not-installed
+- **TargetScreen** — the six allowlisted messaging apps as chips with installed/not-installed
   status, a custom-package field (recorded, still bounded by the allowlist), the armed target, and a
   reset control. Changing the target while armed is disabled.
-- **ExperimentScreen** — explanation, the app under test + whether it is installed, Start,
-  Stop / Cancel, "Change the app under test", "Open the compatibility report", and a live state
-  indicator (Not armed / Waiting for a qualifying event / Completed / Failed / Cancelled).
+- **ExperimentScreen** — explanation, the app under test + whether it is installed, two one-press
+  Start buttons (node counts only, or node counts + message extraction), Stop / Cancel, "Change the
+  app under test", "Open the compatibility report", a separate review entry when a sample is
+  retained, and a live state indicator (Not armed / Waiting for a qualifying event / Completed /
+  Failed / Cancelled).
 - **ResultsScreen** — the `InspectionResult` stage flags, the full structural stats, the widget-class
   table, structural notes, and an interpretation note that counts are not messages.
 - **ReportScreen** — one selectable redacted record per completed or failed inspection in the session,
